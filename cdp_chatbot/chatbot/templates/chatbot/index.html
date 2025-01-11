@@ -1,0 +1,109 @@
+<!-- chatbot/templates/chatbot/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CDP Chatbot</title>
+    <style>
+      #chat-box {
+        max-height: 400px;
+        overflow-y: auto;
+        border: 1px solid #ccc;
+        padding: 10px;
+        margin-bottom: 10px;
+      }
+      .user-message {
+        text-align: right;
+        color: blue;
+      }
+      .bot-message {
+        text-align: left;
+        color: green;
+      }
+      #chat-form {
+        display: flex;
+      }
+      #question {
+        flex: 1;
+        padding: 5px;
+        margin-right: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>CDP Chatbot</h1>
+    <div id="chat-box"></div>
+    <form id="chat-form" method="POST">
+      {% csrf_token %}
+      <input
+        type="text"
+        id="question"
+        name="question"
+        placeholder="Ask your question..."
+        required
+      />
+      <button type="submit">Ask</button>
+    </form>
+
+    <script>
+      const chatBox = document.getElementById("chat-box");
+      const questionInput = document.getElementById("question");
+      const chatForm = document.getElementById("chat-form");
+
+      // Get the CSRF token from the template
+      const csrfToken = document.querySelector(
+        "[name=csrfmiddlewaretoken]"
+      ).value;
+
+      // Handle form submission
+      chatForm.addEventListener("submit", async function (event) {
+        event.preventDefault();
+
+        const userQuestion = questionInput.value;
+
+        // Add user message to the chat
+        const userMessage = document.createElement("p");
+        userMessage.classList.add("user-message");
+        userMessage.textContent = userQuestion;
+        chatBox.appendChild(userMessage);
+
+        // Clear input field
+        questionInput.value = "";
+
+        // Scroll to the bottom of the chat
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        // Send the user's question to the backend
+        const response = await fetch("/chatbot/ask/", {
+          method: "POST",
+          body: new URLSearchParams({ question: userQuestion }),
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "X-CSRFToken": csrfToken, // Include CSRF token here
+          },
+        });
+
+        // Handle the response from the server
+        const data = await response.json();
+        if (response.ok) {
+          // Display the bot's response
+          const botMessage = document.createElement("p");
+          botMessage.classList.add("bot-message");
+          botMessage.textContent =
+            data.answer || "Sorry, I couldn't find an answer.";
+          chatBox.appendChild(botMessage);
+        } else {
+          // Handle errors
+          const errorMessage = document.createElement("p");
+          errorMessage.classList.add("bot-message");
+          errorMessage.textContent = "There was an issue with the request.";
+          chatBox.appendChild(errorMessage);
+        }
+
+        // Scroll to the bottom of the chat
+        chatBox.scrollTop = chatBox.scrollHeight;
+      });
+    </script>
+  </body>
+</html>
